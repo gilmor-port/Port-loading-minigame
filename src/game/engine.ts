@@ -12,17 +12,27 @@ const INITIAL_SPEED = 320; // px / s
 const SPEED_RAMP = 18; // px / s added per second of play
 const MIN_OBSTACLE_GAP_MS = 900;
 const MAX_OBSTACLE_GAP_MS = 2200;
+const BIRD_SPAWN_CHANCE = 0.38;
+/** After this many bug-only spawns in a row, the next obstacle is always a bird */
+const MAX_BUGS_BEFORE_FORCED_BIRD = 3;
+/** Bird top Y — overlaps standing torso/chest, clears ducked hitbox */
+const BIRD_FLY_Y = GROUND_Y - 28;
 const HIGH_SCORE_KEY = "bh_highscore";
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
 export type GameState = "idle" | "running" | "gameOver";
 
+type ObstacleKind = "bug" | "bird";
+
 interface Obstacle {
+  kind: ObstacleKind;
   x: number;
   w: number;
   h: number;
-  double: boolean; // two bugs stacked
+  double: boolean; // two bugs stacked (bugs only)
+  /** top Y for flying birds */
+  flyY?: number;
 }
 
 export interface GameSnapshot {
@@ -48,17 +58,19 @@ function drawHunter(
   y: number,
   tick: number,
   running: boolean,
+  ducking: boolean,
   _logoImg: HTMLImageElement,
   logoWhiteImg: HTMLImageElement
 ) {
-  const legPhase = running ? Math.sin(tick * 12) : 0;
+  const legPhase = running && !ducking ? Math.sin(tick * 12) : 0;
   const blinkOpen = Math.sin(tick * 3.7) > -0.97; // eyes close briefly to blink
+  const squat = ducking ? 22 : 0; // crouch: lower torso, compress
 
   // ── shirt / body ──
   const bodyX = x + 6;
-  const bodyY = y + 2;
+  const bodyY = y + 2 + squat;
   const bodyW = HUNTER_W - 12;
-  const bodyH = HUNTER_H - 18;
+  const bodyH = ducking ? HUNTER_H - 18 - 14 : HUNTER_H - 18;
   ctx.fillStyle = "#111111";
   ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
   ctx.strokeStyle = "#ffffff";
@@ -88,24 +100,26 @@ function drawHunter(
 
   // ── legs ──
   ctx.fillStyle = "#333333";
-  const lLeg = y + HUNTER_H - 16 + legPhase * 6;
-  const rLeg = y + HUNTER_H - 16 - legPhase * 6;
-  ctx.fillRect(x + 8, lLeg, 8, 16);
-  ctx.fillRect(x + HUNTER_W - 16, rLeg, 8, 16);
+  const legH = ducking ? 10 : 16;
+  const legYBase = y + HUNTER_H - (ducking ? 10 : 16);
+  const lLeg = legYBase + legPhase * (ducking ? 2 : 6);
+  const rLeg = legYBase - legPhase * (ducking ? 2 : 6);
+  ctx.fillRect(x + 8, lLeg, 8, legH);
+  ctx.fillRect(x + HUNTER_W - 16, rLeg, 8, legH);
   // shoe highlights
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(x + 7, lLeg + 12, 11, 4);
-  ctx.fillRect(x + HUNTER_W - 17, rLeg + 12, 11, 4);
+  ctx.fillRect(x + 7, lLeg + legH - 4, 11, 4);
+  ctx.fillRect(x + HUNTER_W - 17, rLeg + legH - 4, 11, 4);
 
   // ── neck ──
   ctx.fillStyle = "#e8c9a0";
-  ctx.fillRect(x + HUNTER_W / 2 - 4, bodyY - 5, 8, 7);
+  ctx.fillRect(x + HUNTER_W / 2 - 4, bodyY - (ducking ? 2 : 5), 8, ducking ? 4 : 7);
 
   // ── head ──
   const headCx = x + HUNTER_W / 2;
-  const headCy = y - 8;
-  const headRx = 13;
-  const headRy = 12;
+  const headCy = y - 8 + squat * 0.85;
+  const headRx = ducking ? 11 : 13;
+  const headRy = ducking ? 9 : 12;
   // skin
   ctx.fillStyle = "#e8c9a0";
   ctx.beginPath();
@@ -206,30 +220,38 @@ function drawHunter(
   ctx.lineWidth = 2.5;
   ctx.lineCap = "butt";
   ctx.beginPath();
-  ctx.moveTo(bodyX + bodyW - 2, bodyY + 6);
-  ctx.lineTo(bodyX + bodyW + 16, bodyY + 2);
+  if (ducking) {
+    ctx.moveTo(bodyX + bodyW - 2, bodyY + bodyH * 0.5);
+    ctx.lineTo(bodyX + bodyW + 10, bodyY + bodyH * 0.85);
+  } else {
+    ctx.moveTo(bodyX + bodyW - 2, bodyY + 6);
+    ctx.lineTo(bodyX + bodyW + 16, bodyY + 2);
+  }
   ctx.stroke();
   // net hoop
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 2;
   ctx.fillStyle = "rgba(255,255,255,0.12)";
+  const ncY = ducking ? bodyY + bodyH * 0.75 : bodyY + 8;
+  const ncX = ducking ? bodyX + bodyW + 10 : bodyX + bodyW + 16;
   ctx.beginPath();
-  ctx.arc(bodyX + bodyW + 16, bodyY + 8, 9, 0, Math.PI * 2);
+  ctx.arc(ncX, ncY, ducking ? 6 : 9, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   // net mesh lines
   ctx.strokeStyle = "rgba(255,255,255,0.35)";
   ctx.lineWidth = 0.8;
-  const nc = { x: bodyX + bodyW + 16, y: bodyY + 8 };
+  const nc = { x: ncX, y: ncY };
+  const nr = ducking ? 6 : 9;
   ctx.beginPath();
-  ctx.moveTo(nc.x - 9, nc.y);
-  ctx.lineTo(nc.x + 9, nc.y);
-  ctx.moveTo(nc.x, nc.y - 9);
-  ctx.lineTo(nc.x, nc.y + 9);
-  ctx.moveTo(nc.x - 6, nc.y - 6);
-  ctx.lineTo(nc.x + 6, nc.y + 6);
-  ctx.moveTo(nc.x + 6, nc.y - 6);
-  ctx.lineTo(nc.x - 6, nc.y + 6);
+  ctx.moveTo(nc.x - nr, nc.y);
+  ctx.lineTo(nc.x + nr, nc.y);
+  ctx.moveTo(nc.x, nc.y - nr);
+  ctx.lineTo(nc.x, nc.y + nr);
+  ctx.moveTo(nc.x - nr * 0.67, nc.y - nr * 0.67);
+  ctx.lineTo(nc.x + nr * 0.67, nc.y + nr * 0.67);
+  ctx.moveTo(nc.x + nr * 0.67, nc.y - nr * 0.67);
+  ctx.lineTo(nc.x - nr * 0.67, nc.y + nr * 0.67);
   ctx.stroke();
 }
 
@@ -375,6 +397,76 @@ function drawBug(
   ctx.fill();
 }
 
+function drawBird(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  tick: number
+) {
+  const flap = Math.sin(tick * 18) * 0.35;
+  const cx = x + w / 2;
+  const cy = y + h * 0.45;
+
+  // wings (behind)
+  ctx.fillStyle = "#2a2a2a";
+  ctx.strokeStyle = "#888888";
+  ctx.lineWidth = 1;
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.translate(cx + side * w * 0.15, cy);
+    ctx.rotate(side * flap);
+    ctx.beginPath();
+    ctx.ellipse(side * w * 0.35, 0, w * 0.38, h * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // body
+  ctx.fillStyle = "#3a3a3a";
+  ctx.strokeStyle = "#aaaaaa";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + h * 0.08, w * 0.28, h * 0.32, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // head
+  ctx.fillStyle = "#444444";
+  ctx.beginPath();
+  ctx.arc(x + w * 0.72, y + h * 0.38, h * 0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // beak
+  ctx.fillStyle = "#ffaa44";
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.88, y + h * 0.36);
+  ctx.lineTo(x + w * 1.05, y + h * 0.42);
+  ctx.lineTo(x + w * 0.88, y + h * 0.48);
+  ctx.closePath();
+  ctx.fill();
+
+  // eye
+  ctx.fillStyle = "#111111";
+  ctx.beginPath();
+  ctx.arc(x + w * 0.78, y + h * 0.34, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(x + w * 0.79, y + h * 0.33, 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // tail
+  ctx.strokeStyle = "#666666";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.12, cy);
+  ctx.lineTo(x - w * 0.08, y + h * 0.55);
+  ctx.stroke();
+}
+
 function drawGround(ctx: CanvasRenderingContext2D, offset: number) {
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 2;
@@ -401,6 +493,7 @@ export class GameEngine {
   private hunterY = GROUND_Y;
   private vy = 0;
   private grounded = true;
+  private duckHeld = false;
   private obstacles: Obstacle[] = [];
   private speed = INITIAL_SPEED;
   private score = 0;
@@ -408,6 +501,7 @@ export class GameEngine {
   private elapsed = 0; // total running seconds
   private groundOffset = 0;
   private nextObstacleIn = 0;
+  private bugsSinceBird = 0;
   private tick = 0; // for animations
   private rafId = 0;
   private lastTime = 0;
@@ -449,6 +543,11 @@ export class GameEngine {
     }
   }
 
+  /** Hold ↓ on the ground to duck under birds */
+  setDuck(down: boolean) {
+    this.duckHeld = down;
+  }
+
   private start() {
     this.state = "running";
     this.vy = JUMP_VY;
@@ -460,7 +559,9 @@ export class GameEngine {
     this.hunterY = GROUND_Y;
     this.vy = 0;
     this.grounded = true;
+    this.duckHeld = false;
     this.obstacles = [];
+    this.bugsSinceBird = 0;
     this.speed = INITIAL_SPEED;
     this.score = 0;
     this.elapsed = 0;
@@ -488,14 +589,31 @@ export class GameEngine {
     // spawn obstacles
     this.nextObstacleIn -= dt * 1000;
     if (this.nextObstacleIn <= 0) {
-      const isDouble = Math.random() < 0.3;
-      const h = isDouble ? 64 : 32 + Math.random() * 20;
-      this.obstacles.push({
-        x: CANVAS_W + 20,
-        w: 28,
-        h,
-        double: isDouble,
-      });
+      const spawnBird =
+        this.bugsSinceBird >= MAX_BUGS_BEFORE_FORCED_BIRD ||
+        Math.random() < BIRD_SPAWN_CHANCE;
+      if (spawnBird) {
+        this.obstacles.push({
+          kind: "bird",
+          x: CANVAS_W + 30,
+          w: 40,
+          h: 26,
+          double: false,
+          flyY: BIRD_FLY_Y,
+        });
+        this.bugsSinceBird = 0;
+      } else {
+        const isDouble = Math.random() < 0.3;
+        const h = isDouble ? 64 : 32 + Math.random() * 20;
+        this.obstacles.push({
+          kind: "bug",
+          x: CANVAS_W + 20,
+          w: 28,
+          h,
+          double: isDouble,
+        });
+        this.bugsSinceBird += 1;
+      }
       this.scheduleNextObstacle();
     }
 
@@ -507,15 +625,22 @@ export class GameEngine {
 
     // collision
     const hx = HUNTER_X + 12;
-    const hy = this.hunterY + 4;
     const hw = HUNTER_W - 24;
-    const hh = HUNTER_H - 8;
+    const ducked = this.grounded && this.duckHeld;
+    const hy = ducked ? this.hunterY + 28 : this.hunterY + 4;
+    const hh = ducked ? 22 : HUNTER_H - 8;
     for (const obs of this.obstacles) {
-      const obsY = GROUND_Y + HUNTER_H - obs.h;
+      let obsY: number;
+      let obsH = obs.h;
+      if (obs.kind === "bird") {
+        obsY = obs.flyY ?? BIRD_FLY_Y;
+      } else {
+        obsY = GROUND_Y + HUNTER_H - obs.h;
+      }
       if (
         hx < obs.x + obs.w &&
         hx + hw > obs.x &&
-        hy < obsY + obs.h &&
+        hy < obsY + obsH &&
         hy + hh > obsY
       ) {
         this.die();
@@ -544,16 +669,31 @@ export class GameEngine {
 
     // hunter
     const runningAnim = this.state === "running" && this.grounded;
-    drawHunter(ctx, HUNTER_X, this.hunterY, this.tick, runningAnim, this.logoImg, this.logoWhiteImg);
+    const showDuck = this.state === "running" && this.grounded && this.duckHeld;
+    drawHunter(
+      ctx,
+      HUNTER_X,
+      this.hunterY,
+      this.tick,
+      runningAnim,
+      showDuck,
+      this.logoImg,
+      this.logoWhiteImg
+    );
 
     // obstacles
     for (const obs of this.obstacles) {
-      const obsY = GROUND_Y + HUNTER_H - obs.h;
-      if (obs.double) {
-        drawBug(ctx, obs.x, obsY, obs.w, obs.h / 2, this.tick);
-        drawBug(ctx, obs.x, obsY + obs.h / 2 + 2, obs.w, obs.h / 2, this.tick);
+      if (obs.kind === "bird") {
+        const flyY = obs.flyY ?? BIRD_FLY_Y;
+        drawBird(ctx, obs.x, flyY, obs.w, obs.h, this.tick);
       } else {
-        drawBug(ctx, obs.x, obsY, obs.w, obs.h, this.tick);
+        const obsY = GROUND_Y + HUNTER_H - obs.h;
+        if (obs.double) {
+          drawBug(ctx, obs.x, obsY, obs.w, obs.h / 2, this.tick);
+          drawBug(ctx, obs.x, obsY + obs.h / 2 + 2, obs.w, obs.h / 2, this.tick);
+        } else {
+          drawBug(ctx, obs.x, obsY, obs.w, obs.h, this.tick);
+        }
       }
     }
 
@@ -568,7 +708,7 @@ export class GameEngine {
       ctx.font = "18px monospace";
       ctx.fillStyle = "#aaaaaa";
       ctx.fillText(
-        "Press SPACE / ↑ or tap to start",
+        "SPACE / ↑ jump · ↓ duck birds",
         CANVAS_W / 2,
         CANVAS_H / 2 + 12
       );
