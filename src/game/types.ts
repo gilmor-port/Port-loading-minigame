@@ -15,7 +15,7 @@ export interface Obstacle {
   h: number;
   /** If true, two bug sprites are stacked (bugs only). */
   double: boolean;
-  /** Top Y for flying birds (bugs use ground placement instead). */
+  /** Top Y for flying birds (ground bugs use floor placement). */
   flyY?: number;
 }
 

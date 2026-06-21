@@ -1,6 +1,6 @@
 /**
- * Simple bird silhouette. Mirrored so the beak points into the scroll direction
- * (obstacles move left toward the hunter).
+ * Simple bird silhouette (filled, light plumage). Mirrored so the beak points into
+ * the scroll direction (obstacles move left toward the hunter).
  */
 export function drawBird(
   ctx: CanvasRenderingContext2D,
