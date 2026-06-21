@@ -115,65 +115,138 @@ function drawBug(
   h: number,
   tick: number
 ) {
-  const wingFlap = Math.sin(tick * 20) * 3;
+  const cx = x + w / 2;
+  const pulse = 0.5 + 0.5 * Math.sin(tick * 8); // 0–1 glow pulse
+  const wingFlap = Math.sin(tick * 22) * 4;
 
-  // body
-  ctx.fillStyle = "#ef4444";
-  ctx.beginPath();
-  ctx.ellipse(x + w / 2, y + h * 0.6, w * 0.3, h * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // ── mechanical wings (behind body) ──
+  const wingW = w * 0.55;
+  const wingH = h * 0.28;
+  const wingY = y + h * 0.35;
+  for (const side of [-1, 1]) {
+    const wx = cx + side * (w * 0.08);
+    const wFlap = side * wingFlap;
+    ctx.save();
+    ctx.translate(wx, wingY + wFlap);
+    ctx.rotate(side * 0.25);
+    // outer panel
+    ctx.fillStyle = "#1a1a1a";
+    ctx.strokeStyle = "#00ffcc";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(-wingW, -wingH / 2, wingW, wingH);
+    ctx.fill();
+    ctx.stroke();
+    // circuit vein lines on wing
+    ctx.strokeStyle = "rgba(0,255,204,0.4)";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-wingW * 0.8, 0);
+    ctx.lineTo(-wingW * 0.2, 0);
+    ctx.moveTo(-wingW * 0.5, -wingH * 0.4);
+    ctx.lineTo(-wingW * 0.5, wingH * 0.4);
+    ctx.stroke();
+    ctx.restore();
+  }
 
-  // head
-  ctx.fillStyle = "#fca5a5";
+  // ── thorax (angular hexagonal body) ──
+  const bx = cx;
+  const by = y + h * 0.55;
+  const bw = w * 0.38;
+  const bh = h * 0.38;
+  ctx.fillStyle = "#111111";
+  ctx.strokeStyle = "#00ffcc";
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.arc(x + w / 2, y + h * 0.18, w * 0.22, 0, Math.PI * 2);
+  ctx.moveTo(bx - bw, by);
+  ctx.lineTo(bx - bw * 0.5, by - bh);
+  ctx.lineTo(bx + bw * 0.5, by - bh);
+  ctx.lineTo(bx + bw, by);
+  ctx.lineTo(bx + bw * 0.5, by + bh);
+  ctx.lineTo(bx - bw * 0.5, by + bh);
+  ctx.closePath();
   ctx.fill();
-
-  // spots
-  ctx.fillStyle = "#991b1b";
-  ctx.beginPath();
-  ctx.arc(x + w / 2 - 4, y + h * 0.55, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x + w / 2 + 4, y + h * 0.65, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // wings
-  ctx.fillStyle = "rgba(254,202,202,0.7)";
-  ctx.beginPath();
-  ctx.ellipse(
-    x + w / 2 - w * 0.35,
-    y + h * 0.45 + wingFlap,
-    w * 0.28,
-    h * 0.22,
-    -0.5,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(
-    x + w / 2 + w * 0.35,
-    y + h * 0.45 - wingFlap,
-    w * 0.28,
-    h * 0.22,
-    0.5,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-
-  // antennae
-  ctx.strokeStyle = "#991b1b";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(x + w / 2 - 4, y + h * 0.08);
-  ctx.lineTo(x + w / 2 - 10, y - 4);
   ctx.stroke();
+  // chest circuit line
+  ctx.strokeStyle = `rgba(0,255,204,${0.3 + pulse * 0.5})`;
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(x + w / 2 + 4, y + h * 0.08);
-  ctx.lineTo(x + w / 2 + 10, y - 4);
+  ctx.moveTo(bx - bw * 0.4, by);
+  ctx.lineTo(bx + bw * 0.4, by);
+  ctx.moveTo(bx, by - bh * 0.6);
+  ctx.lineTo(bx, by + bh * 0.6);
   ctx.stroke();
+
+  // ── mechanical legs (3 per side, jointed) ──
+  const legPositions = [-0.25, 0, 0.25];
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < legPositions.length; i++) {
+      const legY = y + h * (0.42 + legPositions[i]);
+      const legPhase = Math.sin(tick * 14 + i * 1.2) * 3 * side;
+      const knee = { x: cx + side * bw * 1.4, y: legY + legPhase };
+      const foot = { x: cx + side * bw * 2.1, y: legY + 5 + legPhase * 0.5 };
+      ctx.strokeStyle = "#444444";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + side * bw * 0.9, legY);
+      ctx.lineTo(knee.x, knee.y);
+      ctx.lineTo(foot.x, foot.y);
+      ctx.stroke();
+      // joint dot
+      ctx.fillStyle = "#00ffcc";
+      ctx.beginPath();
+      ctx.arc(knee.x, knee.y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ── head (armoured square with visor) ──
+  const hx = cx;
+  const hy = y + h * 0.14;
+  const hr = w * 0.26;
+  ctx.fillStyle = "#1a1a1a";
+  ctx.strokeStyle = "#00ffcc";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.rect(hx - hr, hy - hr, hr * 2, hr * 2);
+  ctx.fill();
+  ctx.stroke();
+  // visor slit (glowing)
+  const visorAlpha = 0.7 + pulse * 0.3;
+  ctx.fillStyle = `rgba(0,255,204,${visorAlpha})`;
+  ctx.fillRect(hx - hr * 0.7, hy - hr * 0.15, hr * 1.4, hr * 0.3);
+  // eye LEDs inside visor
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(hx - hr * 0.35, hy, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(hx + hr * 0.35, hy, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── sensor antennae ──
+  ctx.strokeStyle = "#555555";
+  ctx.lineWidth = 1.2;
+  // left
+  ctx.beginPath();
+  ctx.moveTo(hx - hr * 0.5, hy - hr);
+  ctx.lineTo(hx - hr * 0.5 - 5, hy - hr - 6);
+  ctx.lineTo(hx - hr * 0.5 - 8, hy - hr - 4);
+  ctx.stroke();
+  // right
+  ctx.beginPath();
+  ctx.moveTo(hx + hr * 0.5, hy - hr);
+  ctx.lineTo(hx + hr * 0.5 + 5, hy - hr - 6);
+  ctx.lineTo(hx + hr * 0.5 + 8, hy - hr - 4);
+  ctx.stroke();
+  // sensor tips (glowing)
+  ctx.fillStyle = `rgba(0,255,204,${visorAlpha})`;
+  ctx.beginPath();
+  ctx.arc(hx - hr * 0.5 - 8, hy - hr - 4, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(hx + hr * 0.5 + 8, hy - hr - 4, 2, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawGround(ctx: CanvasRenderingContext2D, offset: number) {
