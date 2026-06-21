@@ -33,8 +33,12 @@ export interface GameSnapshot {
 
 // ─── Port logo (inlined SVG as base64 data URL) ──────────────────────────────
 
+// dark fill — used for the head circle background (if needed in future)
 const PORT_LOGO_SRC =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik03NSAyMzEuMjM4TDIwMC41NjIgMjMxLjIzOUw3NSAxMDUuNjgzVjIzMS4yMzhaTTc1IDI3NC43MTZWMjc1Qzc1IDMwMi42MTQgOTcuMzg1OCAzMjUgMTI1IDMyNUgzMjVWMTI1QzMyNSA5Ny4zODU4IDMwMi42MTQgNzUgMjc1IDc1SDI3NC43MjdMMjc0LjcyNiAyNzQuNzE1SDI3NC4yODJWMjc0LjcxN0w3NSAyNzQuNzE2Wk0yMjkuODkgNzVMMjI5Ljg5IDE5OS4wNzlMMTA1LjgwNSA3NUgyMjkuODlaIiBmaWxsPSIjMDUyZTE2Ii8+PC9zdmc+";
+// white fill — used on the dark shirt so the logo is visible
+const PORT_LOGO_WHITE_SRC =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik03NSAyMzEuMjM4TDIwMC41NjIgMjMxLjIzOUw3NSAxMDUuNjgzVjIzMS4yMzhaTTc1IDI3NC43MTZWMjc1Qzc1IDMwMi42MTQgOTcuMzg1OCAzMjUgMTI1IDMyNUgzMjVWMTI1QzMyNSA5Ny4zODU4IDMwMi42MTQgNzUgMjc1IDc1SDI3NC43MjdMMjc0LjcyNiAyNzQuNzE1SDI3NC4yODJWMjc0LjcxN0w3NSAyNzQuNzE2Wk0yMjkuODkgNzVMMjI5Ljg5IDE5OS4wNzlMMTA1LjgwNSA3NUgyMjkuODlaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==";
 
 // ─── drawing helpers ─────────────────────────────────────────────────────────
 
@@ -44,66 +48,188 @@ function drawHunter(
   y: number,
   tick: number,
   running: boolean,
-  logoImg: HTMLImageElement
+  _logoImg: HTMLImageElement,
+  logoWhiteImg: HTMLImageElement
 ) {
   const legPhase = running ? Math.sin(tick * 12) : 0;
+  const blinkOpen = Math.sin(tick * 3.7) > -0.97; // eyes close briefly to blink
 
-  // body — black with a white outline
+  // ── shirt / body ──
+  const bodyX = x + 6;
+  const bodyY = y + 2;
+  const bodyW = HUNTER_W - 12;
+  const bodyH = HUNTER_H - 18;
   ctx.fillStyle = "#111111";
-  ctx.fillRect(x + 8, y, HUNTER_W - 16, HUNTER_H - 16);
+  ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 1;
-  ctx.strokeRect(x + 8, y, HUNTER_W - 16, HUNTER_H - 16);
+  ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
 
-  // head — white circle with Port logo inside
-  const headCx = x + HUNTER_W / 2;
-  const headCy = y - 6;
-  const headR = 14;
-  ctx.fillStyle = "#ffffff";
+  // collar V-shape
+  ctx.strokeStyle = "#cccccc";
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(headCx, headCy, headR, 0, Math.PI * 2);
-  ctx.fill();
-  // thin black border
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 1.5;
+  ctx.moveTo(bodyX + bodyW * 0.3, bodyY);
+  ctx.lineTo(bodyX + bodyW * 0.5, bodyY + 5);
+  ctx.lineTo(bodyX + bodyW * 0.7, bodyY);
   ctx.stroke();
-  // Port logo centred in the head circle
-  if (logoImg.complete && logoImg.naturalWidth > 0) {
-    const logoSize = headR * 1.5;
+
+  // Port logo on shirt — white version so it shows on dark fabric
+  if (logoWhiteImg.complete && logoWhiteImg.naturalWidth > 0) {
+    const logoSize = Math.min(bodyW, bodyH) * 0.7;
     ctx.drawImage(
-      logoImg,
-      headCx - logoSize / 2,
-      headCy - logoSize / 2,
+      logoWhiteImg,
+      bodyX + (bodyW - logoSize) / 2,
+      bodyY + (bodyH - logoSize) / 2,
       logoSize,
       logoSize
     );
   }
 
-  // legs — dark gray, animated when running
+  // ── legs ──
   ctx.fillStyle = "#333333";
   const lLeg = y + HUNTER_H - 16 + legPhase * 6;
   const rLeg = y + HUNTER_H - 16 - legPhase * 6;
   ctx.fillRect(x + 8, lLeg, 8, 16);
   ctx.fillRect(x + HUNTER_W - 16, rLeg, 8, 16);
-  // white shoe highlights
+  // shoe highlights
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(x + 8, lLeg + 12, 10, 4);
-  ctx.fillRect(x + HUNTER_W - 16, rLeg + 12, 10, 4);
+  ctx.fillRect(x + 7, lLeg + 12, 11, 4);
+  ctx.fillRect(x + HUNTER_W - 17, rLeg + 12, 11, 4);
 
-  // net arm — white
+  // ── neck ──
+  ctx.fillStyle = "#e8c9a0";
+  ctx.fillRect(x + HUNTER_W / 2 - 4, bodyY - 5, 8, 7);
+
+  // ── head ──
+  const headCx = x + HUNTER_W / 2;
+  const headCy = y - 8;
+  const headRx = 13;
+  const headRy = 12;
+  // skin
+  ctx.fillStyle = "#e8c9a0";
+  ctx.beginPath();
+  ctx.ellipse(headCx, headCy, headRx, headRy, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // outline
+  ctx.strokeStyle = "#c8a878";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // hair (dark top)
+  ctx.fillStyle = "#222222";
+  ctx.beginPath();
+  ctx.ellipse(headCx, headCy - headRy * 0.35, headRx, headRy * 0.7, 0, Math.PI, 0);
+  ctx.fill();
+  // small side tufts
+  ctx.beginPath();
+  ctx.arc(headCx - headRx + 2, headCy - 4, 4, Math.PI * 0.8, Math.PI * 1.6);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(headCx + headRx - 2, headCy - 4, 4, Math.PI * 1.4, Math.PI * 0.2);
+  ctx.fill();
+
+  // eyes
+  const eyeY = headCy + 1;
+  const eyeOffX = 5;
+  if (blinkOpen) {
+    // whites
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(headCx - eyeOffX, eyeY, 3.5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(headCx + eyeOffX, eyeY, 3.5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // pupils
+    ctx.fillStyle = "#111111";
+    ctx.beginPath();
+    ctx.arc(headCx - eyeOffX + 0.5, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(headCx + eyeOffX + 0.5, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    // eye shine
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(headCx - eyeOffX + 1, eyeY - 1, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(headCx + eyeOffX + 1, eyeY - 1, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // closed blink — thin lines
+    ctx.strokeStyle = "#333333";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(headCx - eyeOffX - 3, eyeY);
+    ctx.lineTo(headCx - eyeOffX + 3, eyeY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(headCx + eyeOffX - 3, eyeY);
+    ctx.lineTo(headCx + eyeOffX + 3, eyeY);
+    ctx.stroke();
+  }
+
+  // eyebrows
+  ctx.strokeStyle = "#222222";
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(headCx - eyeOffX - 3, eyeY - 4.5);
+  ctx.lineTo(headCx - eyeOffX + 3, eyeY - 5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(headCx + eyeOffX - 3, eyeY - 5);
+  ctx.lineTo(headCx + eyeOffX + 3, eyeY - 4.5);
+  ctx.stroke();
+
+  // nose
+  ctx.strokeStyle = "#c8a878";
+  ctx.lineWidth = 1;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(headCx - 1, eyeY + 2);
+  ctx.lineTo(headCx - 2, eyeY + 5);
+  ctx.lineTo(headCx + 2, eyeY + 5);
+  ctx.stroke();
+
+  // smile
+  ctx.strokeStyle = "#a0785a";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(headCx, eyeY + 6, 4, 0.2, Math.PI - 0.2);
+  ctx.stroke();
+
+  // ── net arm ──
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 2.5;
+  ctx.lineCap = "butt";
   ctx.beginPath();
-  ctx.moveTo(x + HUNTER_W - 4, y + 8);
-  ctx.lineTo(x + HUNTER_W + 18, y + 4);
+  ctx.moveTo(bodyX + bodyW - 2, bodyY + 6);
+  ctx.lineTo(bodyX + bodyW + 16, bodyY + 2);
   ctx.stroke();
-  // net circle — white stroke, semi-transparent fill
+  // net hoop
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 2;
-  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.beginPath();
-  ctx.arc(x + HUNTER_W + 18, y + 8, 8, 0, Math.PI * 2);
+  ctx.arc(bodyX + bodyW + 16, bodyY + 8, 9, 0, Math.PI * 2);
   ctx.fill();
+  ctx.stroke();
+  // net mesh lines
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 0.8;
+  const nc = { x: bodyX + bodyW + 16, y: bodyY + 8 };
+  ctx.beginPath();
+  ctx.moveTo(nc.x - 9, nc.y);
+  ctx.lineTo(nc.x + 9, nc.y);
+  ctx.moveTo(nc.x, nc.y - 9);
+  ctx.lineTo(nc.x, nc.y + 9);
+  ctx.moveTo(nc.x - 6, nc.y - 6);
+  ctx.lineTo(nc.x + 6, nc.y + 6);
+  ctx.moveTo(nc.x + 6, nc.y - 6);
+  ctx.lineTo(nc.x - 6, nc.y + 6);
   ctx.stroke();
 }
 
@@ -270,6 +396,7 @@ function drawGround(ctx: CanvasRenderingContext2D, offset: number) {
 export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   private logoImg: HTMLImageElement;
+  private logoWhiteImg: HTMLImageElement;
   private state: GameState = "idle";
   private hunterY = GROUND_Y;
   private vy = 0;
@@ -294,6 +421,8 @@ export class GameEngine {
     this.onUpdate = onUpdate;
     this.logoImg = new Image();
     this.logoImg.src = PORT_LOGO_SRC;
+    this.logoWhiteImg = new Image();
+    this.logoWhiteImg.src = PORT_LOGO_WHITE_SRC;
     this.highScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) ?? "0", 10);
     this.scheduleNextObstacle();
     this.loop(0);
@@ -415,7 +544,7 @@ export class GameEngine {
 
     // hunter
     const runningAnim = this.state === "running" && this.grounded;
-    drawHunter(ctx, HUNTER_X, this.hunterY, this.tick, runningAnim, this.logoImg);
+    drawHunter(ctx, HUNTER_X, this.hunterY, this.tick, runningAnim, this.logoImg, this.logoWhiteImg);
 
     // obstacles
     for (const obs of this.obstacles) {
