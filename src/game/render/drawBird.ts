@@ -19,8 +19,17 @@ export function drawBird(
   const centerX = width / 2;
   const centerY = height * 0.45;
 
-  ctx.fillStyle = "#2a2a2a";
-  ctx.strokeStyle = "#888888";
+  // Light plumage (reads on near-black playfield)
+  const wingFill = "#e6e8ef";
+  const wingStroke = "#a8b0c0";
+  const bodyFill = "#f7f8fc";
+  const bodyStroke = "#c5cad6";
+  const headFill = "#eef0f6";
+  const headStroke = "#aeb6c4";
+  const tailStroke = "#94a3b8";
+
+  ctx.fillStyle = wingFill;
+  ctx.strokeStyle = wingStroke;
   ctx.lineWidth = 1;
   for (const side of [-1, 1] as const) {
     ctx.save();
@@ -41,8 +50,8 @@ export function drawBird(
     ctx.restore();
   }
 
-  ctx.fillStyle = "#3a3a3a";
-  ctx.strokeStyle = "#aaaaaa";
+  ctx.fillStyle = bodyFill;
+  ctx.strokeStyle = bodyStroke;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.ellipse(
@@ -57,21 +66,25 @@ export function drawBird(
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#444444";
+  ctx.fillStyle = headFill;
+  ctx.strokeStyle = headStroke;
   ctx.beginPath();
   ctx.arc(width * 0.72, height * 0.38, height * 0.22, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#ffaa44";
+  ctx.fillStyle = "#f59e0b";
+  ctx.strokeStyle = "#d97706";
+  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(width * 0.88, height * 0.36);
   ctx.lineTo(width * 1.05, height * 0.42);
   ctx.lineTo(width * 0.88, height * 0.48);
   ctx.closePath();
   ctx.fill();
+  ctx.stroke();
 
-  ctx.fillStyle = "#111111";
+  ctx.fillStyle = "#1e293b";
   ctx.beginPath();
   ctx.arc(width * 0.78, height * 0.34, 2.2, 0, Math.PI * 2);
   ctx.fill();
@@ -80,7 +93,7 @@ export function drawBird(
   ctx.arc(width * 0.79, height * 0.33, 0.7, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = "#666666";
+  ctx.strokeStyle = tailStroke;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(width * 0.12, centerY);
