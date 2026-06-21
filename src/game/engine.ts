@@ -86,18 +86,6 @@ function drawHunter(
   ctx.lineTo(bodyX + bodyW * 0.7, bodyY);
   ctx.stroke();
 
-  // Port logo on shirt — white version so it shows on dark fabric
-  if (logoWhiteImg.complete && logoWhiteImg.naturalWidth > 0) {
-    const logoSize = Math.min(bodyW, bodyH) * 0.7;
-    ctx.drawImage(
-      logoWhiteImg,
-      bodyX + (bodyW - logoSize) / 2,
-      bodyY + (bodyH - logoSize) / 2,
-      logoSize,
-      logoSize
-    );
-  }
-
   // ── legs ──
   ctx.fillStyle = "#333333";
   const legH = ducking ? 10 : 16;
@@ -115,27 +103,166 @@ function drawHunter(
   ctx.fillStyle = "#e8c9a0";
   ctx.fillRect(x + HUNTER_W / 2 - 4, bodyY - (ducking ? 2 : 5), 8, ducking ? 4 : 7);
 
-  // ── head ──
+  // ── arms (to sides of laptop, then typing fingers on keys — draw under deck first) ──
+  const gap = ducking ? 4 : 6;
+  const kbdW = ducking ? 28 : 34;
+  const kbdH = ducking ? 7 : 8;
+  const kbdX = bodyX + bodyW + gap;
+  const kbdY = bodyY + (ducking ? bodyH * 0.4 : bodyH * 0.32);
+  const skin = "#e8c9a0";
+  const skinLine = "#c8a878";
+  const sleeve = "#151515";
+  const typeBob = Math.sin(tick * 22) * 1.2;
+
+  const rSx = bodyX + bodyW - 2;
+  const rSy = bodyY + (ducking ? bodyH * 0.3 : 7);
+  const lSx = bodyX + 2;
+  const lSy = bodyY + (ducking ? bodyH * 0.32 : 8);
+  // wrists sit just below / beside deck, hands reach up onto keys
+  const lWristX = kbdX + kbdW * 0.12;
+  const rWristX = kbdX + kbdW * 0.88;
+  const wristY = kbdY + kbdH + 2;
+  const swing = running && !ducking ? Math.sin(tick * 12) * 0.5 : 0;
+  const rElx = (rSx + rWristX) * 0.5 + 4;
+  const rEly = rSy + (wristY - rSy) * 0.55 + swing;
+  const lElx = (lSx + lWristX) * 0.5 + 6;
+  const lEly = lSy + (wristY - lSy) * 0.52 - swing * 0.2;
+
+  ctx.strokeStyle = sleeve;
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(rSx, rSy);
+  ctx.quadraticCurveTo(rSx + 5, rSy + 8, rElx, rEly);
+  ctx.lineTo(rWristX, wristY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(lSx, lSy);
+  ctx.quadraticCurveTo(lSx + 10, lSy + 7, lElx, lEly);
+  ctx.lineTo(lWristX, wristY);
+  ctx.stroke();
+  ctx.strokeStyle = skin;
+  ctx.lineWidth = 3.2;
+  ctx.beginPath();
+  ctx.moveTo(rElx, rEly);
+  ctx.lineTo(rWristX, wristY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(lElx, lEly);
+  ctx.lineTo(lWristX, wristY);
+  ctx.stroke();
+
+  // Port logo on shirt (after arms; sized / placed to stay inside torso)
+  if (logoWhiteImg.complete && logoWhiteImg.naturalWidth > 0) {
+    const logoSize = Math.min(bodyW - 2, bodyH * 0.58);
+    const logoX = bodyX + (bodyW - logoSize) / 2;
+    let logoY = bodyY + bodyH * 0.22;
+    const maxY = bodyY + bodyH - logoSize - 2;
+    if (logoY > maxY) logoY = Math.max(bodyY + 4, maxY);
+    ctx.drawImage(logoWhiteImg, logoX, logoY, logoSize, logoSize);
+  }
+
+  // ── laptop: keyboard + hinge strip + lid (opens toward +x) ──
+  ctx.fillStyle = "#1a1a22";
+  ctx.strokeStyle = "#52525b";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(kbdX, kbdY, kbdW, kbdH, 1.5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "#3f3f4d";
+  const keyRowY = kbdY + 2.5;
+  const keyCols = ducking ? 5 : 6;
+  const keyPitch = (kbdW - 5) / keyCols;
+  for (let i = 0; i < keyCols; i++) {
+    ctx.strokeRect(kbdX + 2.5 + i * keyPitch, keyRowY, keyPitch - 1, 2.8);
+  }
+  ctx.strokeStyle = "#52525b";
+  ctx.beginPath();
+  ctx.moveTo(kbdX + kbdW * 0.35, kbdY + kbdH - 1.5);
+  ctx.lineTo(kbdX + kbdW * 0.65, kbdY + kbdH - 1.5);
+  ctx.stroke();
+
+  ctx.fillStyle = "#2d2d36";
+  ctx.strokeStyle = "#52525b";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(kbdX + kbdW * 0.35, kbdY - 3, kbdW * 0.62, 3, 1);
+  ctx.fill();
+  ctx.stroke();
+
+  const hingeX = kbdX + kbdW;
+  const hingeY = kbdY;
+  const lidAngle = ducking ? 0.42 : 0.45;
+  const lidH = ducking ? 11 : 13;
+  /** Lid span along hinge — shorter than keyboard so the display reads smaller */
+  const lidW = Math.floor(kbdW * 0.68) + 2;
+  ctx.save();
+  ctx.translate(hingeX, hingeY);
+  ctx.rotate(lidAngle);
+  ctx.fillStyle = "#0f172a";
+  ctx.strokeStyle = "#64748b";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(-lidW - 1, -lidH, lidW + 2, lidH, 1);
+  ctx.fill();
+  ctx.stroke();
+  const bezel = 2;
+  const panelH = Math.max(4, lidH - bezel * 2 - 1);
+  ctx.fillStyle = "#2563eb";
+  ctx.fillRect(-lidW + 1, -lidH + bezel, lidW - 3, panelH);
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillRect(-lidW + 2, -lidH + bezel + 2, Math.min(8, lidW - 7), 2);
+  ctx.fillStyle = "#1e40af";
+  ctx.fillRect(-lidW + 2, -lidH * 0.36, lidW - 5, 1.3);
+  ctx.restore();
+
+  // Hands / fingers typing (draw on top of keyboard)
+  ctx.fillStyle = skin;
+  ctx.strokeStyle = skinLine;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(kbdX + kbdW * 0.08, kbdY + kbdH - 1, 11, 5, 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(kbdX + kbdW * 0.72, kbdY + kbdH - 1, 11, 5, 2);
+  ctx.fill();
+  ctx.stroke();
+  const fy = kbdY + 2.2;
+  for (let i = 0; i < 4; i++) {
+    const ox = (i % 2) * 0.4 * typeBob;
+    ctx.beginPath();
+    ctx.arc(kbdX + 3 + (i * keyPitch * 0.85) + ox, fy + (i % 2) * 0.35 * typeBob, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  for (let i = 0; i < 4; i++) {
+    const ox = ((i + 1) % 2) * 0.35 * typeBob;
+    ctx.beginPath();
+    ctx.arc(kbdX + kbdW * 0.52 + i * keyPitch * 0.75 + ox, fy - (i % 2) * 0.3 * typeBob, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // ── head (faces forward: toward +x / running direction) ──
   const headCx = x + HUNTER_W / 2;
   const headCy = y - 8 + squat * 0.85;
   const headRx = ducking ? 11 : 13;
   const headRy = ducking ? 9 : 12;
-  // skin
+
   ctx.fillStyle = "#e8c9a0";
   ctx.beginPath();
   ctx.ellipse(headCx, headCy, headRx, headRy, 0, 0, Math.PI * 2);
   ctx.fill();
-  // outline
   ctx.strokeStyle = "#c8a878";
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // hair (dark top)
   ctx.fillStyle = "#222222";
   ctx.beginPath();
   ctx.ellipse(headCx, headCy - headRy * 0.35, headRx, headRy * 0.7, 0, Math.PI, 0);
   ctx.fill();
-  // small side tufts
   ctx.beginPath();
   ctx.arc(headCx - headRx + 2, headCy - 4, 4, Math.PI * 0.8, Math.PI * 1.6);
   ctx.fill();
@@ -143,11 +270,9 @@ function drawHunter(
   ctx.arc(headCx + headRx - 2, headCy - 4, 4, Math.PI * 1.4, Math.PI * 0.2);
   ctx.fill();
 
-  // eyes
   const eyeY = headCy + 1;
   const eyeOffX = 5;
   if (blinkOpen) {
-    // whites
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
     ctx.ellipse(headCx - eyeOffX, eyeY, 3.5, 3, 0, 0, Math.PI * 2);
@@ -155,24 +280,22 @@ function drawHunter(
     ctx.beginPath();
     ctx.ellipse(headCx + eyeOffX, eyeY, 3.5, 3, 0, 0, Math.PI * 2);
     ctx.fill();
-    // pupils
+    // pupils toward +x (where obstacles / “run” direction come from)
     ctx.fillStyle = "#111111";
     ctx.beginPath();
-    ctx.arc(headCx - eyeOffX + 0.5, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.arc(headCx - eyeOffX + 1.4, eyeY + 0.2, 1.8, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(headCx + eyeOffX + 0.5, eyeY, 1.8, 0, Math.PI * 2);
+    ctx.arc(headCx + eyeOffX + 1.4, eyeY + 0.2, 1.8, 0, Math.PI * 2);
     ctx.fill();
-    // eye shine
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(headCx - eyeOffX + 1, eyeY - 1, 0.7, 0, Math.PI * 2);
+    ctx.arc(headCx - eyeOffX + 2, eyeY - 0.5, 0.7, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(headCx + eyeOffX + 1, eyeY - 1, 0.7, 0, Math.PI * 2);
+    ctx.arc(headCx + eyeOffX + 2, eyeY - 0.5, 0.7, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    // closed blink — thin lines
     ctx.strokeStyle = "#333333";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -185,7 +308,6 @@ function drawHunter(
     ctx.stroke();
   }
 
-  // eyebrows
   ctx.strokeStyle = "#222222";
   ctx.lineWidth = 1.5;
   ctx.lineCap = "round";
@@ -198,7 +320,6 @@ function drawHunter(
   ctx.lineTo(headCx + eyeOffX + 3, eyeY - 4.5);
   ctx.stroke();
 
-  // nose
   ctx.strokeStyle = "#c8a878";
   ctx.lineWidth = 1;
   ctx.lineCap = "round";
@@ -208,50 +329,10 @@ function drawHunter(
   ctx.lineTo(headCx + 2, eyeY + 5);
   ctx.stroke();
 
-  // smile
   ctx.strokeStyle = "#a0785a";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.arc(headCx, eyeY + 6, 4, 0.2, Math.PI - 0.2);
-  ctx.stroke();
-
-  // ── net arm ──
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = "butt";
-  ctx.beginPath();
-  if (ducking) {
-    ctx.moveTo(bodyX + bodyW - 2, bodyY + bodyH * 0.5);
-    ctx.lineTo(bodyX + bodyW + 10, bodyY + bodyH * 0.85);
-  } else {
-    ctx.moveTo(bodyX + bodyW - 2, bodyY + 6);
-    ctx.lineTo(bodyX + bodyW + 16, bodyY + 2);
-  }
-  ctx.stroke();
-  // net hoop
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  ctx.fillStyle = "rgba(255,255,255,0.12)";
-  const ncY = ducking ? bodyY + bodyH * 0.75 : bodyY + 8;
-  const ncX = ducking ? bodyX + bodyW + 10 : bodyX + bodyW + 16;
-  ctx.beginPath();
-  ctx.arc(ncX, ncY, ducking ? 6 : 9, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  // net mesh lines
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 0.8;
-  const nc = { x: ncX, y: ncY };
-  const nr = ducking ? 6 : 9;
-  ctx.beginPath();
-  ctx.moveTo(nc.x - nr, nc.y);
-  ctx.lineTo(nc.x + nr, nc.y);
-  ctx.moveTo(nc.x, nc.y - nr);
-  ctx.lineTo(nc.x, nc.y + nr);
-  ctx.moveTo(nc.x - nr * 0.67, nc.y - nr * 0.67);
-  ctx.lineTo(nc.x + nr * 0.67, nc.y + nr * 0.67);
-  ctx.moveTo(nc.x + nr * 0.67, nc.y - nr * 0.67);
-  ctx.lineTo(nc.x - nr * 0.67, nc.y + nr * 0.67);
   ctx.stroke();
 }
 
@@ -406,8 +487,13 @@ function drawBird(
   tick: number
 ) {
   const flap = Math.sin(tick * 18) * 0.35;
-  const cx = x + w / 2;
-  const cy = y + h * 0.45;
+  // Obstacles move left (toward hunter): mirror sprite so “forward” matches motion
+  ctx.save();
+  ctx.translate(x + w, y);
+  ctx.scale(-1, 1);
+
+  const cx = w / 2;
+  const cy = h * 0.45;
 
   // wings (behind)
   ctx.fillStyle = "#2a2a2a";
@@ -433,38 +519,38 @@ function drawBird(
   ctx.fill();
   ctx.stroke();
 
-  // head
+  // head + beak + eye (original right-facing art in local coords → faces left in world)
   ctx.fillStyle = "#444444";
   ctx.beginPath();
-  ctx.arc(x + w * 0.72, y + h * 0.38, h * 0.22, 0, Math.PI * 2);
+  ctx.arc(w * 0.72, h * 0.38, h * 0.22, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-  // beak
   ctx.fillStyle = "#ffaa44";
   ctx.beginPath();
-  ctx.moveTo(x + w * 0.88, y + h * 0.36);
-  ctx.lineTo(x + w * 1.05, y + h * 0.42);
-  ctx.lineTo(x + w * 0.88, y + h * 0.48);
+  ctx.moveTo(w * 0.88, h * 0.36);
+  ctx.lineTo(w * 1.05, h * 0.42);
+  ctx.lineTo(w * 0.88, h * 0.48);
   ctx.closePath();
   ctx.fill();
 
-  // eye
   ctx.fillStyle = "#111111";
   ctx.beginPath();
-  ctx.arc(x + w * 0.78, y + h * 0.34, 2.2, 0, Math.PI * 2);
+  ctx.arc(w * 0.78, h * 0.34, 2.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.arc(x + w * 0.79, y + h * 0.33, 0.7, 0, Math.PI * 2);
+  ctx.arc(w * 0.79, h * 0.33, 0.7, 0, Math.PI * 2);
   ctx.fill();
 
   // tail
   ctx.strokeStyle = "#666666";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(x + w * 0.12, cy);
-  ctx.lineTo(x - w * 0.08, y + h * 0.55);
+  ctx.moveTo(w * 0.12, cy);
+  ctx.lineTo(-w * 0.08, h * 0.55);
   ctx.stroke();
+
+  ctx.restore();
 }
 
 function drawGround(ctx: CanvasRenderingContext2D, offset: number) {
@@ -719,16 +805,17 @@ export class GameEngine {
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 30px monospace";
-      ctx.fillText("SQUASHED!", CANVAS_W / 2, CANVAS_H / 2 - 28);
+      ctx.fillText("SQUASHED!", CANVAS_W / 2, CANVAS_H / 2 - 34);
       ctx.fillStyle = "#cccccc";
       ctx.font = "18px monospace";
-      ctx.fillText(`Score: ${this.score}`, CANVAS_W / 2, CANVAS_H / 2 + 4);
+      ctx.fillText(`Score: ${this.score}`, CANVAS_W / 2, CANVAS_H / 2 - 4);
       ctx.fillStyle = "#aaaaaa";
+      ctx.fillText(`Best: ${this.highScore}`, CANVAS_W / 2, CANVAS_H / 2 + 18);
       ctx.font = "16px monospace";
       ctx.fillText(
         "Press SPACE / ↑ or tap to restart",
         CANVAS_W / 2,
-        CANVAS_H / 2 + 30
+        CANVAS_H / 2 + 44
       );
     }
   }
