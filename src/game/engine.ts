@@ -15,8 +15,8 @@ const MAX_OBSTACLE_GAP_MS = 2200;
 const BIRD_SPAWN_CHANCE = 0.38;
 /** After this many bug-only spawns in a row, the next obstacle is always a bird */
 const MAX_BUGS_BEFORE_FORCED_BIRD = 3;
-/** Bird top Y — overlaps standing torso/chest, clears ducked hitbox */
-const BIRD_FLY_Y = GROUND_Y - 28;
+/** Bird top Y — above standing head; duck still clears under */
+const BIRD_FLY_Y = GROUND_Y - 40;
 const HIGH_SCORE_KEY = "bh_highscore";
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -105,7 +105,8 @@ function drawHunter(
 
   // ── arms + laptop + hands (wrists track hand pads so forearms move with typing bob) ──
   const gap = ducking ? 4 : 6;
-  const kbdW = ducking ? 28 : 34;
+  /** Deck length (horizontal “_”); lid height `lidLeg` kept separate */
+  const deckW = ducking ? 28 : 36;
   const kbdH = ducking ? 7 : 8;
   const kbdX = bodyX + bodyW + gap;
   const kbdY = bodyY + (ducking ? bodyH * 0.4 : bodyH * 0.32);
@@ -119,11 +120,11 @@ function drawHunter(
   const handPhase = tick * 13;
   const leftBob = Math.sin(handPhase) * handAmp;
   const rightBob = Math.sin(handPhase + Math.PI) * handAmp;
-  const baseHandY = baseY - 3;
+  const baseHandY = baseY - 6.5;
   const handPadW = 12;
   const handPadH = 6;
-  const lHandX = kbdX + kbdW * 0.06;
-  const rHandX = kbdX + kbdW * 0.68;
+  const lHandX = kbdX + deckW * 0.06;
+  const rHandX = kbdX + Math.max(deckW * 0.52, deckW - handPadW - 3);
   // Wrist = top-center of each hand (forearm meets hand; moves with bob)
   const lWristX = lHandX + handPadW * 0.5;
   const rWristX = rHandX + handPadW * 0.5;
@@ -175,14 +176,14 @@ function drawHunter(
   }
 
   // ── laptop: “_|” profile (deck left→right, lid edge up at far +x — no screen) ──
-  ctx.strokeStyle = "#3a3a44";
-  ctx.lineWidth = ducking ? 2.8 : 3.2;
+  ctx.strokeStyle = "#c4c8d0";
+  ctx.lineWidth = ducking ? 4.2 : 5;
   ctx.lineCap = "square";
   ctx.lineJoin = "miter";
   ctx.beginPath();
   ctx.moveTo(kbdX, baseY);
-  ctx.lineTo(kbdX + kbdW, baseY);
-  ctx.lineTo(kbdX + kbdW, baseY - lidLeg);
+  ctx.lineTo(kbdX + deckW, baseY);
+  ctx.lineTo(kbdX + deckW, baseY - lidLeg);
   ctx.stroke();
 
   // Hands on deck — no fingers; same bob as wrists (pads drawn after forearms meet point)
