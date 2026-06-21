@@ -109,7 +109,7 @@ function drawHunter(
   const deckW = ducking ? 28 : 36;
   const kbdH = ducking ? 7 : 8;
   const kbdX = bodyX + bodyW + gap;
-  const kbdY = bodyY + (ducking ? bodyH * 0.4 : bodyH * 0.32);
+  const kbdY = bodyY + (ducking ? bodyH * 0.46 : bodyH * 0.4) + 4;
   const skin = "#e8c9a0";
   const skinLine = "#c8a878";
   const sleeve = "#151515";
