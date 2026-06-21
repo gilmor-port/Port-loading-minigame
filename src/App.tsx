@@ -22,15 +22,32 @@ export default function App() {
   const handleInput = () => engineRef.current?.jump();
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
         handleInput();
       }
+      if (e.code === "ArrowDown") {
+        e.preventDefault();
+        engineRef.current?.setDuck(true);
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "ArrowDown") {
+        e.preventDefault();
+        engineRef.current?.setDuck(false);
+      }
+    };
+    const onBlur = () => engineRef.current?.setDuck(false);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
 
   return (
     <div style={styles.root}>
@@ -55,10 +72,10 @@ export default function App() {
 
       <p style={styles.hint}>
         {snap.state === "running"
-          ? "SPACE / ↑ / tap to jump"
+          ? "SPACE / ↑ / tap — jump · hold ↓ — duck Tetris pieces"
           : snap.state === "gameOver"
           ? "Press SPACE / ↑ or tap to restart"
-          : "Press SPACE / ↑ or tap to start"}
+          : "SPACE / ↑ or tap to start · ↓ ducks Tetris pieces"}
       </p>
     </div>
   );
