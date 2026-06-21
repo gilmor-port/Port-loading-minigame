@@ -15,12 +15,14 @@ import {
   MAX_OBSTACLE_GAP_MS,
   MIN_OBSTACLE_GAP_MS,
   SCROLL_SPEED_RAMP,
+  TETROMINO_FLY_Y,
 } from "./constants";
 import { PORT_LOGO_DARK_DATA_URL, PORT_LOGO_WHITE_DATA_URL } from "./portLogoAssets";
 import { drawBird } from "./render/drawBird";
 import { drawBug } from "./render/drawBug";
+import { drawFlyingTetromino } from "./render/drawFlyingTetromino";
 import { drawGround } from "./render/drawGround";
-import { drawHunter } from "./render/drawHunter";
+import { drawHunter, getHunterHeadHitRect } from "./render/drawHunter";
 import type { GameSnapshot, GameState, Obstacle } from "./types";
 
 /**
@@ -53,7 +55,7 @@ export class GameEngine {
   private groundDashScrollPx = 0;
   /** Milliseconds until the next obstacle may spawn. */
   private msUntilNextObstacle = 0;
-  /** Consecutive bug-only spawns since the last bird. */
+  /** Consecutive ground-bug-only spawns since the last air hazard (Tetromino). */
   private bugsSinceLastBird = 0;
   /** Animation clock in seconds (walk, wings, typing). */
   private animTimeSeconds = 0;
@@ -100,7 +102,7 @@ export class GameEngine {
     }
   }
 
-  /** Hold ↓ on the ground to duck under birds. */
+  /** Hold ↓ on the ground to duck under flying Tetrominos. */
   setDuck(down: boolean): void {
     this.duckHeld = down;
   }
@@ -148,17 +150,18 @@ export class GameEngine {
 
     this.msUntilNextObstacle -= dtSeconds * 1000;
     if (this.msUntilNextObstacle <= 0) {
-      const spawnBird =
+      const spawnAirHazard =
         this.bugsSinceLastBird >= MAX_BUGS_BEFORE_FORCED_BIRD ||
         Math.random() < BIRD_SPAWN_CHANCE;
-      if (spawnBird) {
+      if (spawnAirHazard) {
         this.obstacleList.push({
-          kind: "bird",
+          kind: "tetromino",
           x: CANVAS_W + 30,
-          w: 40,
-          h: 26,
+          w: 54,
+          h: 36,
           double: false,
-          flyY: BIRD_FLY_Y,
+          flyY: TETROMINO_FLY_Y,
+          tetVariant: Math.floor(Math.random() * 7),
         });
         this.bugsSinceLastBird = 0;
       } else {
@@ -187,20 +190,26 @@ export class GameEngine {
     const hunterHitTop = isDucked ? this.hunterAnchorY + 28 : this.hunterAnchorY + 4;
     const hunterHitHeight = isDucked ? 22 : HUNTER_H - 8;
 
+    const headHit = getHunterHeadHitRect(HUNTER_X, this.hunterAnchorY, isDucked);
+
     for (const obstacle of this.obstacleList) {
       let obstacleTopY: number;
       const obstacleHeight = obstacle.h;
-      if (obstacle.kind === "bird") {
+      if (obstacle.kind === "bird" || obstacle.kind === "tetromino") {
         obstacleTopY = obstacle.flyY ?? BIRD_FLY_Y;
       } else {
         obstacleTopY = GROUND_Y + HUNTER_H - obstacle.h;
       }
+      const useHeadOnly = obstacle.kind === "tetromino";
+      const boxLeft = useHeadOnly ? headHit.x : hunterHitLeft;
+      const boxTop = useHeadOnly ? headHit.y : hunterHitTop;
+      const boxW = useHeadOnly ? headHit.w : hunterHitWidth;
+      const boxH = useHeadOnly ? headHit.h : hunterHitHeight;
       const overlapX =
-        hunterHitLeft < obstacle.x + obstacle.w &&
-        hunterHitLeft + hunterHitWidth > obstacle.x;
+        boxLeft < obstacle.x + obstacle.w && boxLeft + boxW > obstacle.x;
       const overlapY =
-        hunterHitTop < obstacleTopY + obstacleHeight &&
-        hunterHitTop + hunterHitHeight > obstacleTopY;
+        boxTop < obstacleTopY + obstacleHeight &&
+        boxTop + boxH > obstacleTopY;
       if (overlapX && overlapY) {
         this.enterGameOver();
         return;
@@ -240,7 +249,18 @@ export class GameEngine {
     );
 
     for (const obstacle of this.obstacleList) {
-      if (obstacle.kind === "bird") {
+      if (obstacle.kind === "tetromino") {
+        const flyY = obstacle.flyY ?? BIRD_FLY_Y;
+        drawFlyingTetromino(
+          ctx,
+          obstacle.x,
+          flyY,
+          obstacle.w,
+          obstacle.h,
+          this.animTimeSeconds,
+          obstacle.tetVariant ?? 0
+        );
+      } else if (obstacle.kind === "bird") {
         const flyY = obstacle.flyY ?? BIRD_FLY_Y;
         drawBird(ctx, obstacle.x, flyY, obstacle.w, obstacle.h, this.animTimeSeconds);
       } else {
@@ -279,7 +299,7 @@ export class GameEngine {
       ctx.font = "18px monospace";
       ctx.fillStyle = "#aaaaaa";
       ctx.fillText(
-        "SPACE / ↑ jump · ↓ duck birds",
+        "SPACE / ↑ jump · ↓ duck Tetris pieces",
         CANVAS_W / 2,
         CANVAS_H / 2 + 12
       );

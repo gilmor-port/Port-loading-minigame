@@ -308,3 +308,25 @@ export function drawHunter(
   ctx.arc(headCenterX, eyeRowY + 6, 4, 0.2, Math.PI - 0.2);
   ctx.stroke();
 }
+
+/**
+ * Axis-aligned bounds of the runner’s head ellipse in `drawHunter`.
+ * Keep these formulas in sync when the head pose or squash changes.
+ */
+export function getHunterHeadHitRect(
+  hunterLeft: number,
+  hunterTop: number,
+  isDucking: boolean
+): { x: number; y: number; w: number; h: number } {
+  const crouchSquashDownPx = isDucking ? 22 : 0;
+  const headCenterX = hunterLeft + HUNTER_W / 2;
+  const headCenterY = hunterTop - 8 + crouchSquashDownPx * 0.85;
+  const headRadiusX = isDucking ? 11 : 13;
+  const headRadiusY = isDucking ? 9 : 12;
+  return {
+    x: headCenterX - headRadiusX,
+    y: headCenterY - headRadiusY,
+    w: headRadiusX * 2,
+    h: headRadiusY * 2,
+  };
+}

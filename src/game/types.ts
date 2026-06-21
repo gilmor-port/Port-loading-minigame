@@ -4,7 +4,7 @@
 
 export type GameState = "idle" | "running" | "gameOver";
 
-export type ObstacleKind = "bug" | "bird";
+export type ObstacleKind = "bug" | "bird" | "tetromino";
 
 /** One obstacle moving left across the screen. */
 export interface Obstacle {
@@ -15,8 +15,10 @@ export interface Obstacle {
   h: number;
   /** If true, two bug sprites are stacked (bugs only). */
   double: boolean;
-  /** Top Y for flying birds (ground bugs use floor placement). */
+  /** Top Y for airborne obstacles (bird / tetromino; ground bugs use floor placement). */
   flyY?: number;
+  /** Which Tetromino shape to draw (0–6 = I,O,T,L,J,S,Z). Only for `tetromino`. */
+  tetVariant?: number;
 }
 
 /** Snapshot pushed to the UI each animation frame. */

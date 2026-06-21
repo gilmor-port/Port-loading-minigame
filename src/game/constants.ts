@@ -44,5 +44,11 @@ export const MAX_BUGS_BEFORE_FORCED_BIRD = 3;
  */
 export const BIRD_FLY_Y = GROUND_Y - 40;
 
+/**
+ * Top Y for flying Tetrominos — tuned against `getHunterHeadHitRect`: overlaps the
+ * standing head but stays below the ducked head (smaller Y = higher on screen).
+ */
+export const TETROMINO_FLY_Y = GROUND_Y - 35;
+
 /** localStorage key for persisted high score. */
 export const HIGH_SCORE_STORAGE_KEY = "bh_highscore";

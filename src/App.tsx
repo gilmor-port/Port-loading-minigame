@@ -72,10 +72,10 @@ export default function App() {
 
       <p style={styles.hint}>
         {snap.state === "running"
-          ? "SPACE / ↑ / tap — jump · hold ↓ — duck birds"
+          ? "SPACE / ↑ / tap — jump · hold ↓ — duck Tetris pieces"
           : snap.state === "gameOver"
           ? "Press SPACE / ↑ or tap to restart"
-          : "SPACE / ↑ or tap to start · ↓ ducks birds"}
+          : "SPACE / ↑ or tap to start · ↓ ducks Tetris pieces"}
       </p>
     </div>
   );
