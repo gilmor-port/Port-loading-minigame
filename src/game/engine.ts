@@ -103,7 +103,7 @@ function drawHunter(
   ctx.fillStyle = "#e8c9a0";
   ctx.fillRect(x + HUNTER_W / 2 - 4, bodyY - (ducking ? 2 : 5), 8, ducking ? 4 : 7);
 
-  // ── arms (to sides of laptop, then typing fingers on keys — draw under deck first) ──
+  // ── arms + laptop + hands (wrists track hand pads so forearms move with typing bob) ──
   const gap = ducking ? 4 : 6;
   const kbdW = ducking ? 28 : 34;
   const kbdH = ducking ? 7 : 8;
@@ -112,21 +112,33 @@ function drawHunter(
   const skin = "#e8c9a0";
   const skinLine = "#c8a878";
   const sleeve = "#151515";
-  const typeBob = Math.sin(tick * 22) * 1.2;
+
+  const baseY = kbdY + kbdH * 0.55;
+  const lidLeg = ducking ? 17 : 21;
+  const handAmp = ducking ? 2.2 : 2.8;
+  const handPhase = tick * 13;
+  const leftBob = Math.sin(handPhase) * handAmp;
+  const rightBob = Math.sin(handPhase + Math.PI) * handAmp;
+  const baseHandY = baseY - 3;
+  const handPadW = 12;
+  const handPadH = 6;
+  const lHandX = kbdX + kbdW * 0.06;
+  const rHandX = kbdX + kbdW * 0.68;
+  // Wrist = top-center of each hand (forearm meets hand; moves with bob)
+  const lWristX = lHandX + handPadW * 0.5;
+  const rWristX = rHandX + handPadW * 0.5;
+  const lWristY = baseHandY + leftBob + 0.9;
+  const rWristY = baseHandY + rightBob + 0.9;
 
   const rSx = bodyX + bodyW - 2;
   const rSy = bodyY + (ducking ? bodyH * 0.3 : 7);
   const lSx = bodyX + 2;
   const lSy = bodyY + (ducking ? bodyH * 0.32 : 8);
-  // wrists sit just below / beside deck, hands reach up onto keys
-  const lWristX = kbdX + kbdW * 0.12;
-  const rWristX = kbdX + kbdW * 0.88;
-  const wristY = kbdY + kbdH + 2;
   const swing = running && !ducking ? Math.sin(tick * 12) * 0.5 : 0;
   const rElx = (rSx + rWristX) * 0.5 + 4;
-  const rEly = rSy + (wristY - rSy) * 0.55 + swing;
+  const rEly = rSy + (rWristY - rSy) * 0.55 + swing;
   const lElx = (lSx + lWristX) * 0.5 + 6;
-  const lEly = lSy + (wristY - lSy) * 0.52 - swing * 0.2;
+  const lEly = lSy + (lWristY - lSy) * 0.52 - swing * 0.2;
 
   ctx.strokeStyle = sleeve;
   ctx.lineWidth = 5;
@@ -134,22 +146,22 @@ function drawHunter(
   ctx.beginPath();
   ctx.moveTo(rSx, rSy);
   ctx.quadraticCurveTo(rSx + 5, rSy + 8, rElx, rEly);
-  ctx.lineTo(rWristX, wristY);
+  ctx.lineTo(rWristX, rWristY);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(lSx, lSy);
   ctx.quadraticCurveTo(lSx + 10, lSy + 7, lElx, lEly);
-  ctx.lineTo(lWristX, wristY);
+  ctx.lineTo(lWristX, lWristY);
   ctx.stroke();
   ctx.strokeStyle = skin;
   ctx.lineWidth = 3.2;
   ctx.beginPath();
   ctx.moveTo(rElx, rEly);
-  ctx.lineTo(rWristX, wristY);
+  ctx.lineTo(rWristX, rWristY);
   ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(lElx, lEly);
-  ctx.lineTo(lWristX, wristY);
+  ctx.lineTo(lWristX, lWristY);
   ctx.stroke();
 
   // Port logo on shirt (after arms; sized / placed to stay inside torso)
@@ -162,88 +174,29 @@ function drawHunter(
     ctx.drawImage(logoWhiteImg, logoX, logoY, logoSize, logoSize);
   }
 
-  // ── laptop: keyboard + hinge strip + lid (opens toward +x) ──
-  ctx.fillStyle = "#1a1a22";
-  ctx.strokeStyle = "#52525b";
-  ctx.lineWidth = 1;
+  // ── laptop: “_|” profile (deck left→right, lid edge up at far +x — no screen) ──
+  ctx.strokeStyle = "#3a3a44";
+  ctx.lineWidth = ducking ? 2.8 : 3.2;
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
   ctx.beginPath();
-  ctx.roundRect(kbdX, kbdY, kbdW, kbdH, 1.5);
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = "#3f3f4d";
-  const keyRowY = kbdY + 2.5;
-  const keyCols = ducking ? 5 : 6;
-  const keyPitch = (kbdW - 5) / keyCols;
-  for (let i = 0; i < keyCols; i++) {
-    ctx.strokeRect(kbdX + 2.5 + i * keyPitch, keyRowY, keyPitch - 1, 2.8);
-  }
-  ctx.strokeStyle = "#52525b";
-  ctx.beginPath();
-  ctx.moveTo(kbdX + kbdW * 0.35, kbdY + kbdH - 1.5);
-  ctx.lineTo(kbdX + kbdW * 0.65, kbdY + kbdH - 1.5);
+  ctx.moveTo(kbdX, baseY);
+  ctx.lineTo(kbdX + kbdW, baseY);
+  ctx.lineTo(kbdX + kbdW, baseY - lidLeg);
   ctx.stroke();
 
-  ctx.fillStyle = "#2d2d36";
-  ctx.strokeStyle = "#52525b";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(kbdX + kbdW * 0.35, kbdY - 3, kbdW * 0.62, 3, 1);
-  ctx.fill();
-  ctx.stroke();
-
-  const hingeX = kbdX + kbdW;
-  const hingeY = kbdY;
-  const lidAngle = ducking ? 0.42 : 0.45;
-  const lidH = ducking ? 11 : 13;
-  /** Lid span along hinge — shorter than keyboard so the display reads smaller */
-  const lidW = Math.floor(kbdW * 0.68) + 2;
-  ctx.save();
-  ctx.translate(hingeX, hingeY);
-  ctx.rotate(lidAngle);
-  ctx.fillStyle = "#0f172a";
-  ctx.strokeStyle = "#64748b";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(-lidW - 1, -lidH, lidW + 2, lidH, 1);
-  ctx.fill();
-  ctx.stroke();
-  const bezel = 2;
-  const panelH = Math.max(4, lidH - bezel * 2 - 1);
-  ctx.fillStyle = "#2563eb";
-  ctx.fillRect(-lidW + 1, -lidH + bezel, lidW - 3, panelH);
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  ctx.fillRect(-lidW + 2, -lidH + bezel + 2, Math.min(8, lidW - 7), 2);
-  ctx.fillStyle = "#1e40af";
-  ctx.fillRect(-lidW + 2, -lidH * 0.36, lidW - 5, 1.3);
-  ctx.restore();
-
-  // Hands / fingers typing (draw on top of keyboard)
+  // Hands on deck — no fingers; same bob as wrists (pads drawn after forearms meet point)
   ctx.fillStyle = skin;
   ctx.strokeStyle = skinLine;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(kbdX + kbdW * 0.08, kbdY + kbdH - 1, 11, 5, 2);
+  ctx.roundRect(lHandX, baseHandY + leftBob, handPadW, handPadH, 2);
   ctx.fill();
   ctx.stroke();
   ctx.beginPath();
-  ctx.roundRect(kbdX + kbdW * 0.72, kbdY + kbdH - 1, 11, 5, 2);
+  ctx.roundRect(rHandX, baseHandY + rightBob, handPadW, handPadH, 2);
   ctx.fill();
   ctx.stroke();
-  const fy = kbdY + 2.2;
-  for (let i = 0; i < 4; i++) {
-    const ox = (i % 2) * 0.4 * typeBob;
-    ctx.beginPath();
-    ctx.arc(kbdX + 3 + (i * keyPitch * 0.85) + ox, fy + (i % 2) * 0.35 * typeBob, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
-  for (let i = 0; i < 4; i++) {
-    const ox = ((i + 1) % 2) * 0.35 * typeBob;
-    ctx.beginPath();
-    ctx.arc(kbdX + kbdW * 0.52 + i * keyPitch * 0.75 + ox, fy - (i % 2) * 0.3 * typeBob, 1.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
 
   // ── head (faces forward: toward +x / running direction) ──
   const headCx = x + HUNTER_W / 2;
