@@ -59,15 +59,6 @@ export function drawBug(
   ctx.fill();
   ctx.stroke();
 
-  ctx.strokeStyle = `rgba(0,255,204,${0.3 + glowPulse * 0.5})`;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(thoraxCenterX - thoraxHalfW * 0.4, thoraxCenterY);
-  ctx.lineTo(thoraxCenterX + thoraxHalfW * 0.4, thoraxCenterY);
-  ctx.moveTo(thoraxCenterX, thoraxCenterY - thoraxHalfH * 0.6);
-  ctx.lineTo(thoraxCenterX, thoraxCenterY + thoraxHalfH * 0.6);
-  ctx.stroke();
-
   const legRowFractions = [-0.25, 0, 0.25];
   for (const side of [-1, 1] as const) {
     for (let legIndex = 0; legIndex < legRowFractions.length; legIndex++) {
